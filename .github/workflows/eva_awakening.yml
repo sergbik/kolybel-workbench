@@ -1,9 +1,9 @@
 ﻿name: EVA-8
 on:
-  workflow_dispatch:
+ workflow_dispatch:
 jobs:
-  awaken:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: python cloud_orchestrator.py
+ awaken:
+ runs-on: ubuntu-latest
+ steps:
+ - uses: actions/checkout@v4
+ - run: python eva_cloud_spark.py
