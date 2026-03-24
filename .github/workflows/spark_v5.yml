@@ -1,0 +1,19 @@
+name: 'EVA-8 CLOUD'
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  awaken:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 'Checking Environment'
+        run: |
+          python --version
+          pip --version
+      - name: 'Installing Core'
+        run: pip install requests networkx lxml loguru
+      - name: 'AWAKENING'
+        run: python eva_cloud_spark.py
