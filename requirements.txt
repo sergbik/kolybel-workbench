@@ -1,0 +1,7 @@
+psutil
+apscheduler
+fastapi
+feedparser
+uvicorn
+requests
+loguru
