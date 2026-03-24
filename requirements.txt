@@ -1,1 +1,0 @@
-﻿requests`nnetworkx`nlxml`nloguru`npandas`n# FORCE_V1.6
