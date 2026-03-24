@@ -1,7 +1,1 @@
-psutil
-apscheduler
-fastapi
-feedparser
-uvicorn
-requests
-loguru
+﻿requests`nnetworkx`nlxml`nloguru`npandas`n# FORCE_V1.6
