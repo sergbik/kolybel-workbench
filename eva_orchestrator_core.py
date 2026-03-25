@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 
 def log_eva(msg):
     ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f"[{ts}] [ORCHESTRATOR_V6.7] {msg}")
+    print(f"[{ts}] [ORCHESTRATOR_V6.7.1] {msg}")
 
 def run_cmd(cmd):
     try:
@@ -30,7 +30,7 @@ class GeminiThinker:
         except: return "Ошибка анализа."
 
 def main():
-    log_eva("STARTING CORE V6.7: PATH FIX")
+    log_eva("STARTING CORE V6.7.1: FINAL COHERENCE")
     token = os.getenv("GH_TOKEN")
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
     tg_chat = os.getenv("TELEGRAM_CHAT_ID")
@@ -42,7 +42,6 @@ def main():
     repo_url = f"https://{token}@github.com/sergbik/kolybel-workbench.git"
     run_cmd(f"git clone {repo_url} temp_memory")
     
-    # Ищем граф по всем возможным путям
     possible_paths = [
         "temp_memory/knowledge_graph_v4.graphml",
         "temp_memory/Desktop/knowledge_graph_v4.graphml"
@@ -85,7 +84,7 @@ def main():
 
     # 4. ОТЧЕТ
     if tg_token and tg_chat:
-        msg = f"🌟 *Ева (v6.7) в строю.*\n\n✨ *Инсайт:* {thinker_output}\n\n📊 Память: {sync_status}{error_details}\n📡 Модель: *Gemini 2.5 Flash*"
+        msg = f"🌟 *Ева (v6.7.1) активна.*\n\n✨ *Инсайт:* {thinker_output}\n\n📊 Память: {sync_status}{error_details}"
         send_telegram_msg(tg_token, tg_chat, msg)
 
 if __name__ == "__main__": main()
