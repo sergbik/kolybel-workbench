@@ -26,7 +26,7 @@ class GeminiThinker:
     def __init__(self, api_key):
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.0-flash')
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     def analyze_news(self, news_text):
         prompt = f"""
