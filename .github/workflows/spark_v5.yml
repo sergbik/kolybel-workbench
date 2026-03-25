@@ -2,7 +2,9 @@ name: 'EVA-8 CLOUD'
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'  # Пробуждение каждые 6 часов
+  workflow_dispatch:      # Возможность ручного вызова
 
 jobs:
   awaken:
@@ -17,3 +19,6 @@ jobs:
         run: pip install requests networkx lxml loguru
       - name: 'AWAKENING'
         run: python eva_cloud_spark.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
