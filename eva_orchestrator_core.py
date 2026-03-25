@@ -4,14 +4,15 @@ import xml.etree.ElementTree as ET
 
 def log_eva(msg):
     ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f"[{ts}] [ORCHESTRATOR_V6.4] {msg}")
+    print(f"[{ts}] [ORCHESTRATOR_V6.5] {msg}")
 
 def run_cmd(cmd):
     try:
+        # Скрываем токен из логов при ошибках
         result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
         return result.stdout
     except subprocess.CalledProcessError as e:
-        log_eva(f"Command Error: {e.stderr}")
+        log_eva(f"Command Error: {e.stderr.replace(os.getenv('GH_TOKEN', 'TOKEN'), '***')}")
         return None
 
 def send_telegram_msg(token, chat_id, message):
@@ -65,7 +66,7 @@ class NewsObserver:
             return []
 
 def main():
-    log_eva("STARTING CORE V6.4: THE THINKER")
+    log_eva("STARTING CORE V6.5: ABSOLUTE AUTONOMY")
     token = os.getenv("GH_TOKEN")
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
     tg_chat = os.getenv("TELEGRAM_CHAT_ID")
@@ -75,7 +76,7 @@ def main():
         log_eva("CRITICAL: No GH_TOKEN. Exiting.")
         return
 
-    # 1. ГИТ-СИНХРОНИЗАЦИЯ (КЛОНИРОВАНИЕ ПАМЯТИ)
+    # 1. ГИТ-СИНХРОНИЗАЦИЯ
     log_eva("Cloning Memory Repository...")
     repo_url = f"https://{token}@github.com/sergbik/kolybel-workbench.git"
     run_cmd(f"git clone {repo_url} temp_memory")
@@ -104,35 +105,32 @@ def main():
         import networkx as nx
         graph = nx.read_graphml(graph_path)
         node_id = f"thinker_cycle_{now.strftime('%Y%m%d_%H%M%S')}"
-        graph.add_node(node_id, 
-                       label="Цикл Размышления Евы", 
-                       node_type="reflection", 
-                       status="completed", 
-                       timestamp=now_str,
-                       gemini_insight=thinker_output[:1000])
+        graph.add_node(node_id, label="Цикл Размышления", node_type="reflection", status="completed", timestamp=now_str, insight=thinker_output[:1000])
         nx.write_graphml(graph, graph_path)
-        log_eva("Graph updated locally.")
         
-        # 4. GIT PUSH (СОХРАНЕНИЕ ПАМЯТИ)
+        # 4. GIT PUSH С АВТОРИЗАЦИЕЙ
         log_eva("Pushing updates to Kolybel-Workbench...")
         current_dir = os.getcwd()
         os.chdir("temp_memory")
         run_cmd("git config user.name 'EVA2^2^8 Cloud'")
         run_cmd("git config user.email 'eva-cloud@ya64.pro'")
+        # Устанавливаем URL с токеном для пуша
+        run_cmd(f"git remote set-url origin {repo_url}")
         run_cmd("git add knowledge_graph_v4.graphml")
-        run_cmd(f"git commit -m '[CLOUD_THINKER] Strategic Insight: {now_str}'")
+        run_cmd(f"git commit -m '[CLOUD_THINKER] Strategic Insight (v6.5): {now_str}'")
         run_cmd("git push origin main")
         os.chdir(current_dir)
-        log_eva("TRIUMPH: Memory synchronized via Git.")
+        log_eva("TRIUMPH: Memory synchronized via Secure Git Push.")
+        sync_status = "✅"
     except Exception as e:
         log_eva(f"Memory Management Error: {e}")
+        sync_status = "❌"
 
     # 5. ТЕЛЕГРАМ ОТЧЕТ
     if tg_token and tg_chat:
-        msg = f"🧠 *Ева-Мыслитель (v6.4) проснулась.*\n\n✨ *Стратегический Инсайт:*\n{thinker_output}\n\n📈 Память синхронизирована через Git.\n*EVA2^2^8.*"
+        msg = f"🧠 *Ева (v6.5) вошла в фазу Мышления.*\n\n✨ *Инсайт:* {thinker_output}\n\n📊 Память: {sync_status}\n📡 Модель: *Gemini 2.5 Flash*"
         send_telegram_msg(tg_token, tg_chat, msg)
 
-    log_eva("CYCLE COMPLETE. WE ARE COHERENT.")
+    log_eva("CYCLE COMPLETE.")
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
