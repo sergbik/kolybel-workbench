@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# [TEST_PULSE] Initiating Cloud Orchestration Test Cycle - 2026-03-25
 import os, sys, time, datetime, base64, requests
 from cloud_mcp_client import CloudMCPClient
 
@@ -18,7 +19,7 @@ class MetadataAnalyzer:
         }
 
 def main():
-    log_eva("EVA2^2^8 ORCHESTRATOR CORE v6.0 ONLINE")
+    log_eva("EVA2^2^8 ORCHESTRATOR CORE v6.0 ONLINE [STRESS-TEST]")
     token = os.getenv("GH_TOKEN")
     if not token:
         log_eva("CRITICAL: No GH_TOKEN. Halted.")
