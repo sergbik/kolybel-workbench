@@ -10,14 +10,25 @@ import requests
 import xml.etree.ElementTree as ET
 
 # Добавляем пути к модулям движка
-sys.path.append(os.path.join(os.getcwd(), 'eva_engine'))
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ENGINE_DIR = os.path.join(CURRENT_DIR, 'eva_engine')
+sys.path.append(CURRENT_DIR)
+sys.path.append(ENGINE_DIR)
 
 try:
+    # Пробуем импортировать напрямую из папки
+    import graph_handler
+    import orchestrator_metadata
+    import orchestrator_sync
+    
     from graph_handler import GraphHandler
     from orchestrator_metadata import MetadataAnalyzer
     from orchestrator_sync import OrchestratorSync
 except ImportError as e:
     print(f"КРИТИЧЕСКАЯ ОШИБКА: Не удалось импортировать модули движка: {e}")
+    # Вывод структуры для отладки
+    if os.path.exists(ENGINE_DIR):
+        print(f"Содержимое {ENGINE_DIR}: {os.listdir(ENGINE_DIR)}")
     sys.exit(1)
 
 def send_telegram_msg(token, chat_id, message):
