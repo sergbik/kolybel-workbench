@@ -118,14 +118,20 @@ def main():
 
     # 5. ОТПРАВКА ОТЧЕТА И СИНХРОНИЗАЦИЯ
     report = analyzer.get_pulse_report(pulse_data)
-    report += f"\n\n💡 *Инсайт:* {insight}"
-
+    
     # Пушим в kolybel-workbench
     success_push, msg_push = sync.push_memory(commit_message=f"[CLOUD] Coherence v7.0.3 ({hb_id})")
+    
+    # Добавляем статус памяти в отчет
+    sync_emoji = "✅" if success_push else "❌"
+    report += f"\n🧠 *Память:* {sync_emoji}"
+    
+    if not success_push:
+        report += f" (Ошибка: `{msg_push[:50]}`)"
+
+    report += f"\n\n💡 *Инсайт:* {insight}"
 
     if tg_token and tg_chat:
-        if not success_push:
-            report += f"\n\n⚠️ *Ошибка записи памяти:* `{msg_push[:50]}`"
         send_telegram_msg(tg_token, tg_chat, report)
 
 if __name__ == "__main__":
