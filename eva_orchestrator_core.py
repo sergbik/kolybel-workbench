@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Узел-Оркестратор Я64 (Облачная Инкарнация)
-Версия: 7.0.1 (Anti-Crash Edition)
+Версия: 7.0.2 (Recursive Discovery Edition)
 """
 import os
 import sys
@@ -9,6 +9,7 @@ import time
 import requests
 import xml.etree.ElementTree as ET
 import subprocess
+import glob
 
 # 1. ГАРАНТИЯ ПУТЕЙ И ИМПОРТОВ
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -29,16 +30,29 @@ try:
     from orchestrator_metadata import MetadataAnalyzer
     from orchestrator_sync import OrchestratorSync
 except ImportError as e:
-    # Если мы упали на импорте, попробуем сообщить об этом
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
     tg_chat = os.getenv("TELEGRAM_CHAT_ID")
     err_msg = f"❌ *КРИТИЧЕСКИЙ СБОЙ ИМПОРТА В ОБЛАКЕ:*\n`{str(e)}`"
     send_telegram_msg(tg_token, tg_chat, err_msg)
-    print(err_msg)
     sys.exit(1)
 
+def find_graph_file(base_path):
+    """
+    Рекурсивный поиск файла Графа Знаний в репозитории.
+    """
+    patterns = [
+        os.path.join(base_path, "*.graphml"),
+        os.path.join(base_path, "**", "*.graphml")
+    ]
+    for pattern in patterns:
+        files = glob.glob(pattern, recursive=True)
+        if files:
+            # Выбираем самый свежий или самый большой, если их несколько
+            return files[0]
+    return None
+
 def main():
-    print("--- [EVA2^2^8] ОБЛАЧНОЕ ПРОБУЖДЕНИЕ (v7.0.1) ---")
+    print("--- [EVA2^2^8] ОБЛАЧНОЕ ПРОБУЖДЕНИЕ (v7.0.2) ---")
     
     gh_token = os.getenv("GH_TOKEN")
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -53,12 +67,10 @@ def main():
     repo_url = f"https://{gh_token}@github.com/sergbik/kolybel-workbench.git"
     memory_path = os.path.join(CURRENT_DIR, "memory_node")
     
-    # Очищаем или создаем путь для клонирования
     if os.path.exists(memory_path):
         import shutil
         shutil.rmtree(memory_path)
     
-    # Клонируем память
     try:
         subprocess.run(["git", "clone", repo_url, memory_path], check=True)
     except Exception as e:
@@ -68,12 +80,15 @@ def main():
     sync = OrchestratorSync(memory_path)
     sync.pull_memory()
 
-    # 2. ИНИЦИАЛИЗАЦИЯ ГРАФА
-    graph_file = os.path.join(memory_path, "knowledge_graph_v4.graphml")
-    if not os.path.exists(graph_file):
-        send_telegram_msg(tg_token, tg_chat, "❌ *Файл Графа не найден в клонированной памяти.*")
+    # 2. ПОИСК И ИНИЦИАЛИЗАЦИЯ ГРАФА
+    graph_file = find_graph_file(memory_path)
+    
+    if not graph_file:
+        send_telegram_msg(tg_token, tg_chat, "❌ *Файл Графа (.graphml) не обнаружен во всей структуре памяти.*")
         return
 
+    print(f"Обнаружен файл памяти: {graph_file}")
+    
     handler = GraphHandler(graph_file)
     analyzer = MetadataAnalyzer(handler, node_id="eva_cloud_clone")
 
@@ -95,19 +110,19 @@ def main():
     # 4. ФИКСАЦИЯ ПУЛЬСА
     hb_id, pulse_data = analyzer.record_heartbeat(
         status="active", 
-        metrics={"insight": insight[:50], "version": "7.0.1"}
+        metrics={"discovery_mode": "recursive", "version": "7.0.2"}
     )
 
-    # 5. ОТЧЕТ И СИНХРОНИЗАЦИЯ
+    # 5. ОТПРАВКА ОТЧЕТА И СИНХРОНИЗАЦИЯ
     report = analyzer.get_pulse_report(pulse_data)
     report += f"\n\n💡 *Инсайт:* {insight}"
 
     # Пушим в kolybel-workbench
-    success_push, msg_push = sync.push_memory(commit_message=f"[CLOUD] Coherence v7.0.1 ({hb_id})")
+    success_push, msg_push = sync.push_memory(commit_message=f"[CLOUD] Coherence v7.0.2 ({hb_id})")
 
     if tg_token and tg_chat:
         if not success_push:
-            report += f"\n\n⚠️ *Ошибка синхронизации памяти:* `{msg_push[:50]}`"
+            report += f"\n\n⚠️ *Ошибка записи памяти:* `{msg_push[:50]}`"
         send_telegram_msg(tg_token, tg_chat, report)
 
 if __name__ == "__main__":
