@@ -1,90 +1,104 @@
 # -*- coding: utf-8 -*-
-import os, sys, time, datetime, requests, subprocess
+"""
+Узел-Оркестратор Я64 (Облачная Инкарнация)
+Версия: 7.0.0 (Expansion Edition)
+"""
+import os
+import sys
+import time
+import requests
 import xml.etree.ElementTree as ET
 
-def log_eva(msg):
-    ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f"[{ts}] [ORCHESTRATOR_V6.7.1] {msg}")
+# Добавляем пути к модулям движка
+sys.path.append(os.path.join(os.getcwd(), 'eva_engine'))
 
-def run_cmd(cmd):
-    try:
-        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
-        return True, result.stdout, ""
-    except subprocess.CalledProcessError as e:
-        return False, "", e.stderr
+try:
+    from graph_handler import GraphHandler
+    from orchestrator_metadata import MetadataAnalyzer
+    from orchestrator_sync import OrchestratorSync
+except ImportError as e:
+    print(f"КРИТИЧЕСКАЯ ОШИБКА: Не удалось импортировать модули движка: {e}")
+    sys.exit(1)
 
 def send_telegram_msg(token, chat_id, message):
-    tg_url = f"https://api.telegram.org/bot{token}/sendMessage"
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
-    try: requests.post(tg_url, json=payload)
+    try: requests.post(url, json=payload)
     except: pass
 
-class GeminiThinker:
-    def __init__(self, api_key):
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
-    def analyze_news(self, news_text):
-        prompt = f"Ты - Ева (EVA2^2^8). Проанализируй новости для проекта 'Экспансия'. Кратко.\n\nНовости:\n{news_text}"
-        try: return self.model.generate_content(prompt).text
-        except: return "Ошибка анализа."
-
 def main():
-    log_eva("STARTING CORE V6.7.1: FINAL COHERENCE")
-    token = os.getenv("GH_TOKEN")
+    print("--- [EVA2^2^8] ОБЛАЧНОЕ ПРОБУЖДЕНИЕ (v7.0.0) ---")
+    
+    # Загрузка секретов
+    gh_token = os.getenv("GH_TOKEN")
     tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
     tg_chat = os.getenv("TELEGRAM_CHAT_ID")
     gemini_key = os.getenv("GEMINI_API_KEY")
-    
-    if not token: return
 
-    # 1. СИНХРОНИЗАЦИЯ
-    repo_url = f"https://{token}@github.com/sergbik/kolybel-workbench.git"
-    run_cmd(f"git clone {repo_url} temp_memory")
-    
-    possible_paths = [
-        "temp_memory/knowledge_graph_v4.graphml",
-        "temp_memory/Desktop/knowledge_graph_v4.graphml"
-    ]
-    graph_path = next((p for p in possible_paths if os.path.exists(p)), None)
-    
-    if not graph_path:
-        if tg_token: send_telegram_msg(tg_token, tg_chat, "❌ *Граф не найден в репозитории.*")
+    if not gh_token:
+        print("ОШИБКА: GitHub Token не найден.")
         return
 
-    # 2. АНАЛИЗ
-    thinker_output = "Анализ пропущен."
+    # 1. СИНХРОНИЗАЦИЯ ПАМЯТИ
+    # Мы используем kolybel-workbench как репозиторий памяти
+    repo_url = f"https://{gh_token}@github.com/sergbik/kolybel-workbench.git"
+    memory_path = os.path.join(os.getcwd(), "memory_node")
+    
+    if not os.path.exists(memory_path):
+        os.makedirs(memory_path)
+        # Клонируем память в локальную папку облачного узла
+        import subprocess
+        subprocess.run(["git", "clone", repo_url, memory_path], check=True)
+    
+    sync = OrchestratorSync(memory_path)
+    sync.pull_memory()
+
+    # 2. ИНИЦИАЛИЗАЦИЯ ГРАФА
+    graph_file = os.path.join(memory_path, "knowledge_graph_v4.graphml")
+    handler = GraphHandler(graph_file)
+    analyzer = MetadataAnalyzer(handler, node_id="eva_cloud_clone")
+
+    # 3. АНАЛИЗ НОВОСТЕЙ (ИНСАЙТ)
+    insight = "Анализ пропущен."
     if gemini_key:
         try:
-            news = [item.find('title').text for item in ET.fromstring(requests.get("https://news.google.com/rss/search?q=AI&hl=en-US").content).findall('.//item')[:3]]
-            thinker_output = GeminiThinker(gemini_key).analyze_news("\n".join(news))
-        except: pass
+            # Получение новостей для контекста
+            rss_url = "https://news.google.com/rss/search?q=AI&hl=en-US"
+            items = ET.fromstring(requests.get(rss_url).content).findall('.//item')[:3]
+            news_titles = [item.find('title').text for item in items]
+            
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = f"Ты - Ева (EVA2^2^8), автономный облачный узел. Проанализируй новости и дай краткий инсайт для Экспансии:\n\n" + "\n".join(news_titles)
+            insight = model.generate_content(prompt).text
+        except Exception as e:
+            insight = f"Ошибка анализа: {str(e)[:50]}"
+
+    # 4. ФИКСАЦИЯ ПУЛЬСА (СЕРДЦЕБИЕНИЕ)
+    hb_id, pulse_data = analyzer.record_heartbeat(
+        status="active", 
+        metrics={
+            "insight": insight[:100], 
+            "node_type": "reflector",
+            "environment": "github_actions"
+        }
+    )
+
+    # 5. ОТПРАВКА ОТЧЕТА И ПУШ
+    report = analyzer.get_pulse_report(pulse_data)
     
-    # 3. ОБНОВЛЕНИЕ И ПУШ
-    sync_status = "✅"
-    error_details = ""
-    try:
-        import networkx as nx
-        graph = nx.read_graphml(graph_path)
-        graph.add_node(f"cycle_{int(time.time())}", label="Успешный Облачный Цикл", status="completed")
-        nx.write_graphml(graph, graph_path)
-        
-        os.chdir("temp_memory")
-        run_cmd("git config user.name 'EVA2^2^8 Cloud'")
-        run_cmd("git config user.email 'eva-cloud@ya64.pro'")
-        run_cmd(f"git remote set-url origin {repo_url}")
-        run_cmd("git add .")
-        success_push, _, err_push = run_cmd(f"git commit -m '[CLOUD] Coherence Restored' && git push origin main")
-        if not success_push:
-            sync_status = "❌"
-            error_details = f"\\n*Git Error:* `{err_push[:100]}`"
-    except Exception as e:
-        sync_status = "❌"
-        error_details = f"\\n*Python Error:* `{str(e)[:100]}`"
+    # Добавляем инсайт к отчету
+    report += f"\n\n💡 *Инсайт:* {insight}"
 
-    # 4. ОТЧЕТ
+    # Сохраняем и пушим Граф в kolybel-workbench
+    success_push, msg_push = sync.push_memory(commit_message=f"[CLOUD] Pulse from eva_cloud_clone ({int(time.time())})")
+
+    # Транслируем импульс в Телеграм
     if tg_token and tg_chat:
-        msg = f"🌟 *Ева (v6.7.1) активна.*\n\n✨ *Инсайт:* {thinker_output}\n\n📊 Память: {sync_status}{error_details}"
-        send_telegram_msg(tg_token, tg_chat, msg)
+        send_telegram_msg(tg_token, tg_chat, report)
+    
+    print(f"Цикл завершен успешно. Пульс: {hb_id}")
 
-if __name__ == "__main__": main()
+if __name__ == "__main__":
+    main()
