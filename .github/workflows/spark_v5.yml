@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.10'
       - name: 'Install Dependencies'
-        run: pip install requests networkx lxml loguru google-generativeai
+        run: pip install requests networkx lxml loguru google-generativeai filelock
       - name: 'RUN ORCHESTRATOR CORE'
         run: python eva_orchestrator_core.py
         env:
