@@ -32,9 +32,20 @@ class OrchestratorSync:
         return self._run_git(["pull", "origin", "main"])
 
     def push_memory(self, commit_message="Pulse sync"):
-        """Отправка изменений Графа в облако."""
+        """Отправка изменений Графа в облако с автоматической настройкой identity."""
         print(f"[{time.ctime()}] Синхронизация: Pushing memory...")
+        
+        # Настройка личности для Git (необходима в облачных окружениях)
+        self._run_git(["config", "user.name", "EVA2^2^8 Cloud"])
+        self._run_git(["config", "user.email", "eva-cloud@ya64.pro"])
+        
         self._run_git(["add", "."])
+        # Проверяем, есть ли изменения перед коммитом
+        success_check, msg_check = self._run_git(["status"])
+        if "nothing to commit" in msg_check:
+            print("Нет изменений для записи.")
+            return True, "Nothing to commit"
+            
         success, msg = self._run_git(["commit", "-m", commit_message])
         if success:
             return self._run_git(["push", "origin", "main"])
