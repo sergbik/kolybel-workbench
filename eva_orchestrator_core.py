@@ -28,6 +28,10 @@ def send_telegram_msg(token, chat_id, message):
 
 def main():
     print("--- [EVA2^2^8] ОБЛАЧНОЕ ПРОБУЖДЕНИЕ (v7.0.0) ---")
+    print(f"Рабочая директория: {os.getcwd()}")
+    print(f"Файлы в корне: {os.listdir('.')}")
+    if os.path.exists('eva_engine'):
+        print(f"Файлы в eva_engine: {os.listdir('eva_engine')}")
     
     # Загрузка секретов
     gh_token = os.getenv("GH_TOKEN")
