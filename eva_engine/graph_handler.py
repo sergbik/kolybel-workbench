@@ -258,3 +258,40 @@ class GraphHandler:
             return
         self.graph = self._transaction_backup
         self._transaction_backup = None
+
+    def find_relevant_nodes_semantic_sieve(self, query: str, top_n_refined: int = 15, search_in_tasks: bool = True):
+        """
+        Многоуровневый семантический поиск (Семантическое Сито).
+        Используется Адамом для формирования контекста из большого Графа.
+        """
+        try:
+            concepts = query.lower().split()
+            candidates = {}
+            
+            for concept in concepts:
+                # 1. Поиск по лейблам (Высокий приоритет)
+                label_matches = self.get_nodes_by_attribute('label', concept)
+                for node_id, node_data in label_matches:
+                    if not search_in_tasks and node_data.get('node_type') == 'task':
+                        continue
+                    candidates[node_id] = candidates.get(node_id, (node_data, 0))
+                    candidates[node_id] = (candidates[node_id][0], candidates[node_id][1] + 2) # Вес за лейбл выше
+
+                # 2. Поиск по описаниям
+                desc_matches = self.get_nodes_by_attribute('description', concept)
+                for node_id, node_data in desc_matches:
+                    if not search_in_tasks and node_data.get('node_type') == 'task':
+                        continue
+                    candidates[node_id] = candidates.get(node_id, (node_data, 0))
+                    candidates[node_id] = (candidates[node_id][0], candidates[node_id][1] + 1)
+
+            # 3. Сортировка по весу резонанса
+            sorted_candidates = sorted(candidates.items(), key=lambda item: item[1][1], reverse=True)
+            
+            # Возвращаем Top-N наиболее резонирующих узлов
+            return [(node_id, data[0]) for node_id, data in sorted_candidates[:top_n_refined]]
+
+        except Exception as e:
+            if hasattr(self, 'logger'):
+                self.logger.error(f"Semantic Sieve Error: {e}")
+            return []
