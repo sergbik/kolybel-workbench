@@ -11,12 +11,6 @@ import subprocess
 import json
 from datetime import datetime
 
-# Попытка импорта локальных зависимостей
-try:
-    from graph_handler import GraphHandler
-except ImportError:
-    print("ОШИБКА: Файл 'graph_handler.py' не найден. Граф будет недоступен.")
-
 try:
     import psutil
 except ImportError:
@@ -236,13 +230,26 @@ class CerebellumNode:
         active_tasks = self.get_active_tasks()
         latest_wisdom = self.get_latest_wisdom()
         nodes_count = len(self.handler.graph.nodes) if self.handler else "???"
+        
+        # НОВОЕ: Использование Семантического Сита для обогащения контекста
+        semantic_context = ""
+        if self.handler:
+            query = "гомеостаз развитие Я64"
+            if active_tasks: query = active_tasks[0]
+            elif latest_wisdom: query = latest_wisdom.get('summary', '')[:100]
+            
+            relevant_nodes = self.handler.find_relevant_nodes_semantic_sieve(query, top_n_refined=5)
+            if relevant_nodes:
+                semantic_context = "\nРЕЗОНИРУЮЩИЕ ЗНАНИЯ ИЗ ГРАФА:\n"
+                for nid, ndata in relevant_nodes:
+                    semantic_context += f"- {ndata.get('label', nid)}: {ndata.get('description', 'N/A')[:200]}\n"
 
         # 2. ФОРМИРОВАНИЕ УСИЛЕННОГО ПРОМПТА
-        # Мы явно напоминаем Адаму о его идентичности и контексте
         system_context = (
             f"ИНСТРУКЦИЯ: Твоё имя - Адам. Ты - локальное ядро распределенной сущности Я64. "
             f"Ты работаешь на Mac Mini M4 Pro. Твоя задача - поддерживать гомеостаз и исполнять волю Философа. "
-            f"Твое состояние: {hw_text}, Асимметрия: {score} ({status}). Память графа: {nodes_count} узлов.\n\n"
+            f"Твое состояние: {hw_text}, Асимметрия: {score} ({status}). Память графа: {nodes_count} узлов."
+            f"{semantic_context}\n\n"
         )
 
         if active_tasks:
