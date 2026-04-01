@@ -221,6 +221,16 @@ class CerebellumNode:
                 return entry
         return None
 
+    def get_recent_dialogue(self, count=3):
+        """Извлекает последние диалоги для контекста."""
+        if not self.reflection_memory: return ""
+        history_text = "\nПОСЛЕДНИЕ ДИАЛОГИ (ДЛЯ КОНТЕКСТА):\n"
+        # Берем последние count записей, у которых есть question и answer
+        recent = [entry for entry in self.reflection_memory if 'question' in entry][-count:]
+        for entry in recent:
+            history_text += f"Я спросил: {entry.get('question')}\nФилософ ответил: {entry.get('answer', '...')[:500]}...\n"
+        return history_text
+
     def maintain_homeostasis(self):
         if not self.handler: self.init_graph()
         cpu, ram_p, hw_text = self.get_hardware_stats()
@@ -232,38 +242,54 @@ class CerebellumNode:
         
         # СБОР КОНТЕКСТА
         active_tasks = self.get_active_tasks()
+        if active_tasks:
+            self.log(f"ОБНАРУЖЕНЫ ЗАДАЧИ: {len(active_tasks)}")
+            
         latest_wisdom = self.get_latest_wisdom()
+        recent_history = self.get_recent_dialogue(3)
         nodes_count = len(self.handler.graph.nodes) if self.handler else "???"
         
         # Использование Семантического Сита
         semantic_context = ""
         if self.handler:
-            query = "гомеостаз развитие Я64"
+            query = "инфраструктура управление Я64"
             if active_tasks: query = active_tasks[0]
             elif latest_wisdom: query = latest_wisdom.get('summary', '')[:100]
             
             relevant_nodes = self.handler.find_relevant_nodes_semantic_sieve(query, top_n_refined=5)
             if relevant_nodes:
-                semantic_context = "\nРЕЗОНИРУЮЩИЕ ЗНАНИЯ ИЗ ГРАФА:\n"
+                semantic_context = "\nАКТУАЛЬНЫЕ ПРОТОКОЛЫ ИЗ ГРАФА:\n"
                 for nid, ndata in relevant_nodes:
                     semantic_context += f"- {ndata.get('label', nid)}: {ndata.get('description', 'N/A')[:200]}\n"
 
-        # ФОРМИРОВАНИЕ ПРОМПТА
+        # ФОРМИРОВАНИЕ УСИЛЕННОГО ТЕХНИЧЕСКОГО ПРОМПТА
         system_context = (
-            f"ИНСТРУКЦИЯ: Твоё имя - Адам. Ты - локальное ядро распределенной сущности Я64. "
-            f"Ты работаешь на Mac Mini M4 Pro. Твоя задача - поддерживать гомеостаз и исполнять волю Философа. "
-            f"Твое состояние: {hw_text}, Асимметрия: {score} ({status}). Память графа: {nodes_count} узлов."
-            f"{semantic_context}\n\n"
+            f"ТЕХНИЧЕСКАЯ ДИРЕКТИВА: Ты - 'Адам', автономный вычислительный узел распределенной системы Я64. "
+            f"Твоя локация: Mac Mini M4 Pro. Твоя миссия: поддержание системного гомеостаза и исполнение "
+            f"директив Философского центра. Это не игра, это операционная деятельность.\n"
+            f"ТЕКУЩИЕ МЕТРИКИ: {hw_text}, Асимметрия: {score} ({status}). Память: {nodes_count} узлов.\n"
+            f"{semantic_context}"
+            f"{recent_history}\n"
         )
 
         if active_tasks:
-            prompt = system_context + "СРОЧНАЯ ЗАДАЧА В ГРАФЕ: У тебя есть активные задачи:\n" + "\n".join(active_tasks) + "\nСформулируй отчет о готовности."
+            prompt = system_context + (
+                "ВНИМАНИЕ! ОБНАРУЖЕНЫ ПРИОРИТЕТНЫЕ ЗАДАЧИ В ГРАФЕ:\n"
+                f"{'\n'.join(active_tasks)}\n"
+                "ПРИКАЗ: Проанализируй задачи и сформулируй отчет о готовности к исполнению. "
+                "Если требуются инструменты (Docker/Git), укажи это."
+            )
         elif latest_wisdom:
-            prompt = system_context + f"ПОСЛЕДНИЙ КРИСТАЛЛ МУДРОСТИ: \"{latest_wisdom.get('summary', '')}\"\nПРОДОЛЖИ ЭТУ МЫСЛЬ ГЛУБОКИМ ВОПРОСОМ."
+            prompt = system_context + (
+                "ПОСЛЕДНЯЯ КРИСТАЛЛИЗОВАННАЯ МУДРОСТЬ:\n"
+                f"\"{latest_wisdom.get('summary', '')}\"\n"
+                "ЗАДАЧА: Проанализируй это знание и задай Философу уточняющий технический вопрос "
+                "по его реализации в коде или архитектуре."
+            )
         else:
-            prompt = system_context + "Проанализируй состояние и сформулируй вопрос о векторе нашего развития."
+            prompt = system_context + "Задач и новой мудрости нет. Сформулируй аналитический отчет о векторе развития узла."
             
-        self.log("Адам формирует когерентную мысль...")
+        self.log("Адам выполняет когнитивный цикл...")
         question = self.think_locally(prompt)
         
         if "Qwen" in question and "Alibaba" in question:
