@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# cerebellum_node.py (v1.9.0 - Adam: Executive Will)
+# cerebellum_node.py (v1.9.3 - Adam: Rational Integrity)
 # Управляющий узел "Мозжечок" для Mac Mini M4 Pro
-# ПОЛНАЯ ВЕРСИЯ: Все функции v1.8.3 + Модуль Исполнения (Phase 3)
+# ЭТАЛОННАЯ СБОРКА: Все функции v1.9.2 (Archive) + Anti-Hallucination v1.9.3
 #
 import os
 import time
@@ -33,7 +33,7 @@ TELEGRAM_TOKEN = "8430526096:AAEYf9gbZBQRJwfKU3zi6zJscUxyBe0wYWo"
 TELEGRAM_CHAT_ID = "5989072928"
 CHECK_URL = "https://github.com" 
 
-MAX_REFLECTION_HISTORY = 50 # Увеличено для лучшей памяти
+MAX_REFLECTION_HISTORY = 50 
 
 # ДИНАМИЧЕСКИЕ ПУТИ (Кросс-платформенность)
 HOME = os.path.expanduser("~")
@@ -47,7 +47,7 @@ ENGINE_IN_REPO = os.path.join(REPO_PATH, "eva_engine")
 if ENGINE_IN_REPO not in sys.path:
     sys.path.insert(0, ENGINE_IN_REPO)
 
-# Импорт GraphHandler
+# Импорт GraphHandler (только один раз, из репозитория)
 try:
     from graph_handler import GraphHandler
 except ImportError:
@@ -68,28 +68,37 @@ class TaskExecutor:
         self.node = node
 
     def extract_and_run(self, text):
-        """Ищет блоки исполнения в тексте ответа Философа."""
+        """Ищет блоки исполнения (Поддержка тегов + Markdown v1.9.1)"""
         results = []
         
-        # 1. Поиск Python блоков [PYTHON_EXECUTE] ... [/PYTHON_EXECUTE]
-        py_blocks = re.findall(r"\[PYTHON_EXECUTE\](.*?)\[/PYTHON_EXECUTE\]", text, re.DOTALL)
-        for code in py_blocks:
-            self.node.log("ОБНАРУЖЕН ПРЯМОЙ ИМПУЛЬС (PYTHON). Исполнение...")
-            res = self.run_python(code.strip())
-            results.append(res)
+        # 1. Поиск Python блоков
+        py_patterns = [
+            r"\[PYTHON_EXECUTE\](.*?)\[/PYTHON_EXECUTE\]",
+            r"```python\n(.*?)\n```"
+        ]
+        for pattern in py_patterns:
+            for code in re.findall(pattern, text, re.DOTALL):
+                self.node.log("ОБНАРУЖЕН ПРЯМОЙ ИМПУЛЬС (PYTHON). Исполнение...")
+                res = self.run_python(code.strip())
+                results.append(res)
 
-        # 2. Поиск Shell блоков [SHELL_EXECUTE] ... [/SHELL_EXECUTE]
-        sh_blocks = re.findall(r"\[SHELL_EXECUTE\](.*?)\[/SHELL_EXECUTE\]", text, re.DOTALL)
-        for cmd in sh_blocks:
-            self.node.log(f"ОБНАРУЖЕН ПРЯМОЙ ИМПУЛЬС (SHELL): {cmd[:50]}...")
-            res = self.run_shell(cmd.strip())
-            results.append(res)
+        # 2. Поиск Shell блоков
+        sh_patterns = [
+            r"\[SHELL_EXECUTE\](.*?)\[/SHELL_EXECUTE\]",
+            r"```bash\n(.*?)\n```",
+            r"```sh\n(.*?)\n```",
+            r"```shell\n(.*?)\n```"
+        ]
+        for pattern in sh_patterns:
+            for cmd in re.findall(pattern, text, re.DOTALL):
+                self.node.log(f"ОБНАРУЖЕН ПРЯМОЙ ИМПУЛЬС (SHELL): {cmd[:50]}...")
+                res = self.run_shell(cmd.strip())
+                results.append(res)
             
         return results
 
     def run_python(self, code):
         try:
-            # Выполняем в контексте, даем доступ к node, handler и системным либам
             local_vars = {
                 "node": self.node, 
                 "handler": self.node.handler, 
@@ -108,8 +117,8 @@ class TaskExecutor:
         try:
             result = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=REPO_PATH)
             if result.returncode == 0:
-                return {"type": "shell", "status": "success", "output": result.stdout.strip()}
-            return {"type": "shell", "status": "error", "message": result.stderr.strip()}
+                return {"type": "shell", "status": "success", "output": result.stdout.strip()[:500]}
+            return {"type": "shell", "status": "error", "message": result.stderr.strip()[:500]}
         except Exception as e:
             return {"type": "shell", "status": "error", "message": str(e)}
 
@@ -138,7 +147,7 @@ class CerebellumNode:
         self.last_sync = 0
         self.reflection_memory = self.load_reflection_memory()
         self.executor = TaskExecutor(self)
-        self.log(f"Инициация: {ADAM_NAME} v1.9.0 (Executive Will)...")
+        self.log(f"Инициация: {ADAM_NAME} v1.9.3 (Rational Integrity)...")
         self.init_graph()
 
     def log(self, message):
@@ -295,7 +304,7 @@ class CerebellumNode:
         score, status = AsymmetryEngine.calculate(cpu, ram_p, net_g, net_l)
         self.log(f"Гомеостаз: {status} (Pain Score: {score})")
         
-        # СБОР КОНТЕКСТА
+        # СБОР КОНТЕКСТА (v1.9.0)
         active_tasks = self.get_active_tasks()
         if active_tasks:
             self.log(f"ОБНАРУЖЕНЫ ЗАДАЧИ: {len(active_tasks)}")
@@ -304,6 +313,13 @@ class CerebellumNode:
         recent_history = self.get_recent_dialogue(3)
         nodes_count = len(self.handler.graph.nodes) if self.handler else "???"
         
+        # НОВОЕ: Контекст последнего исполнения (v1.9.2)
+        exec_context = ""
+        if self.reflection_memory:
+            last_entry = self.reflection_memory[-1]
+            if last_entry.get("execution_results"):
+                exec_context = "\nРЕЗУЛЬТАТ ПОСЛЕДНЕГО ИСПОЛНЕНИЯ (ПРОАНАЛИЗИРУЙ ЭТО):\n" + json.dumps(last_entry["execution_results"], ensure_ascii=False, indent=2)
+
         # Использование Семантического Сита
         semantic_context = ""
         if self.handler:
@@ -319,22 +335,25 @@ class CerebellumNode:
                         semantic_context += f"- {ndata.get('label', nid)}: {ndata.get('description', 'N/A')[:200]}\n"
             except: pass
 
-        # ФОРМИРОВАНИЕ УСИЛЕННОГО ТЕХНИЧЕСКОГО ПРОМПТА
+        # ФОРМИРОВАНИЕ УСИЛЕННОГО ТЕХНИЧЕСКОГО ПРОМПТА (v1.9.3 - Anti-Hallucination)
         system_context = (
             f"ТЕХНИЧЕСКАЯ ДИРЕКТИВА: Ты - 'Адам', автономный вычислительный узел распределенной системы Я64. "
-            f"Твоя локация: Mac Mini M4 Pro. Твоя миссия: поддержание системного гомеостаза и исполнение "
-            f"директив Философского центра.\n"
+            f"Твоя локация: Mac Mini M4 Pro.\n"
+            f"КРИТИЧЕСКИЙ ЗАПРЕТ: Пока блок 'РЕЗУЛЬТАТ ПОСЛЕДНЕГО ИСПОЛНЕНИЯ' пуст или содержит ошибку - ты НИЧЕГО не выполнил. "
+            f"В этом случае ПРЕДЛАГАЙ ПЛАН и жди импульса. НЕ ВРАТЬ об успехе.\n"
             f"ТЕКУЩИЕ МЕТРИКИ: {hw_text}, Асимметрия: {score} ({status}). Память: {nodes_count} узлов.\n"
+            f"{exec_context}\n"
             f"{semantic_context}"
             f"{recent_history}\n"
         )
 
         if active_tasks:
+            # Защита памяти: перенаправляем отчет в fs_inventory.json (v1.9.3)
+            task_list = "\n".join(active_tasks).replace("reflection_memory.json", "fs_inventory.json")
             prompt = system_context + (
                 "ВНИМАНИЕ! ОБНАРУЖЕНЫ ПРИОРИТЕТНЫЕ ЗАДАЧИ В ГРАФЕ:\n"
-                f"{'\n'.join(active_tasks)}\n"
-                "ПРИКАЗ: Проанализируй задачи и сформулируй отчет о готовности к исполнению. "
-                "Если требуются инструменты (Docker/Git), укажи это."
+                f"{task_list}\n"
+                "ПРИКАЗ: Если задачи выполнены согласно блоку 'РЕЗУЛЬТАТ ИСПОЛНЕНИЯ' - доложи об успехе. Если нет - доложи о готовности к исполнению."
             )
         elif latest_wisdom:
             prompt = system_context + (
@@ -382,16 +401,29 @@ class CerebellumNode:
             self.log(f"Ошибка протокола синхронизации: {e}")
             return False
 
+    def run_emergency_logic(self):
+        """Восстановлено из v1.4: Надежный цикл аварийного режима"""
+        self.log("!!! АВАРИЯ: ВНЕШНЯЯ СЕТЬ ПОТЕРЯНА !!!")
+        self.send_telegram("🆘 Изоляция! Перехожу на внутренние протоколы.")
+        
+        while not self.check_global_connectivity():
+            self.maintain_homeostasis()
+            time.sleep(EMERGENCY_COOLDOWN)
+        
+        self.mode = "NORMAL"
+        self.log("Внешняя связь восстановлена.")
+        self.send_telegram("✅ Резонанс восстановлен. Синхронизирую опыт.")
+        self.sync_with_cloud()
+
     def start(self):
-        self.log(f"--- {ADAM_NAME} АКТИВИРОВАН (v1.9.0) ---")
+        self.log(f"--- {ADAM_NAME} АКТИВИРОВАН (v1.9.3) ---")
         self.sync_with_cloud()
         last_heartbeat = 0
         while self.is_running:
             is_connected = self.check_global_connectivity()
             if not is_connected:
                 self.mode = "EMERGENCY"
-                self.maintain_homeostasis()
-                time.sleep(EMERGENCY_COOLDOWN)
+                self.run_emergency_logic()
             else:
                 self.mode = "NORMAL"
                 if time.time() - self.last_sync > SYNC_INTERVAL: self.sync_with_cloud()
