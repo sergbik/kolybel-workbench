@@ -376,7 +376,7 @@ class CerebellumNode:
     def think_locally(self, prompt):
         payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
         try:
-            response = requests.post(OLLAMA_URL, json=payload, timeout=60)
+            response = requests.post(OLLAMA_URL, json=payload, timeout=100)
             return response.json().get("response", "...")
         except Exception as e:
             self.log(f"Ошибка Ollama: {e}"); return "Мысль прервана."
